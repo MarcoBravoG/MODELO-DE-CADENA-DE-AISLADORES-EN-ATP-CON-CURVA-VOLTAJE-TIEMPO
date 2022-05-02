@@ -1,0 +1,44 @@
+MODEL VOLT_TIME
+comment--------------------------------------
+|MODELO DE CURVA VOLTAJE TIEMPO EN ATP             |
+|JUAN RAMIREZ                                      | 
+| Entrada: UP, UT para computar Voltaje            |
+| a traves del aislador                            |
+| Salida: Close, comando para cerrar TACS/switch   |
+| D:  longitud de la cadena de aisladores (air gap)|
+
+-----------------------------------endcomment 
+INPUT UP, UT
+OUTPUT CLOSE,VD   
+--La salida del modelo debe conectarse a un tac switch
+
+DATA D {DFLT:1.86} -- valor de D por defecto
+
+VAR CLOSE, U, TT, FLASH, TIME, C1, C2, VD --variables
+
+--inicializacion de variables
+INIT
+  CLOSE:=open                      --TACS switch inicia abierto
+  TT:=0
+  C1:=400000*D                        --constante de la curva volt-time 
+  C2:=710000*D                        --constante de la curva volt-time
+  VD:=0
+ENDINIT
+--ejecucion del calculo
+EXEC
+
+  U:= ABS(UP-UT)                --(V) a traves de la cadena de aisladores
+
+                --    curva v-time
+
+    IF (t<>0 AND CLOSE=0) THEN
+      TT:=TT+timestep                    --TT toma el tiempo en segundos
+      TIME:=TT*10**6                    --tiempo en microsegundos
+      FLASH:=(C1+(C2/(TIME**0.75)))       --se calcula la curva v-time
+      VD:=FLASH
+      IF (U>=FLASH) THEN
+        CLOSE:=1                     --Flashover
+      ENDIF               
+    ENDIF
+ENDEXEC
+ENDMODEL
